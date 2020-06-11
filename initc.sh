@@ -73,6 +73,7 @@ install(){
 
     mkdir -pv "${projectName}"
     cd "${projectName}"
+    git init .
 
     sed -e "s|<PROJECTNAME>|${projectName}|g" ${thisDir}/rootfs/CMakeLists.txt > CMakeLists.txt
     cp -r ${thisDir}/rootfs/src .
