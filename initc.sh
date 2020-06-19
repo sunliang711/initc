@@ -54,8 +54,16 @@ function runAsRoot(){
 # write your code below (just define function[s])
 # function with 'function' is hidden when run help, without 'function' is show
 ###############################################################################
-# TODO
-install(){
+create(){
+    projects=$@
+    for p in "$@";do
+        echo "${green}Create project: $p .. ${reset}"
+        create_ "$p"
+    done
+
+}
+
+function create_(){
     projectName=${1}
     if [ -z "${projectName}" ];then
         echo -n "Enter project name: "
@@ -67,7 +75,7 @@ install(){
     fi
 
     if [ -d "${projectName}" ];then
-        echo "${projectName} exists"
+        echo "${red}${projectName} exists${reset}"
         exit 1
     fi
 
@@ -82,7 +90,9 @@ install(){
 *.swp
 .idea/
 build/
+.vscode/
 EOF
+cd - >/dev/null 2>&1
 }
 
 
