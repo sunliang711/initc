@@ -55,6 +55,10 @@ function runAsRoot(){
 # function with 'function' is hidden when run help, without 'function' is show
 ###############################################################################
 create(){
+    if [ $# -eq 0 ];then
+        echo "Usage: $(basename $0) <project1> [project2] ..."
+        return 1
+    fi
     projects=$@
     for p in "$@";do
         echo "${green}Create project: $p .. ${reset}"

@@ -55,13 +55,18 @@ function runAsRoot(){
 # function with 'function' is hidden when run help, without 'function' is show
 ###############################################################################
 # TODO
+dest=$home/.bin
+
 install(){
-    dest=$home/.bin
     if [ ! -d "$dest" ];then
         mkdir -p "$dest"
     fi
     ln -sf ${thisDir}/initc.sh $dest
     echo "add $dest to PATH if it not in PATH"
+}
+
+uninstall(){
+    rm ${dest}/initc.sh
 }
 
 
