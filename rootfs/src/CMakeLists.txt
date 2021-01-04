@@ -2,17 +2,20 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 SET(SRC main.c)
 
-#set include dirs
+# set include dirs
 # for example: SET(include_dirs inc1 inc2 inc3)
 SET(include_dirs)
 
-#set sub directory
+# set sub directory
 # for example: SET(sub_dirs s1 s2 s3)
 SET(sub_dirs)
 
-#set libs used in the following list 'LIBS'
+# set libs used in the following list 'LIBS'
 # for example: SET(LIBS a b c)
 SET(LIBS)
+
+# set link_directories
+SET(link_dirs)
 
 SET(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
@@ -29,8 +32,11 @@ FOREACH(sub ${sub_dirs})
     MESSAGE(STATUS "add_subdirectory ${sub}")
     ADD_SUBDIRECTORY(${sub} ${sub}_bin)
 ENDFOREACH()
-# SET(INCLUDE_DIRS "/PATH/TO/INCLUDE/DIRS")
-# INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
+
+FOREACH(dir ${link_dirs})
+    MESSAGE(STATUS "link_directories ${link}")
+    LINK_DIRECTORIES(${dir})
+ENDFOREACH()
 
 FUNCTION(add_executable target_name)
     # call builtin add_executable first
