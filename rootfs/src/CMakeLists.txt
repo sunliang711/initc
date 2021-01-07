@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-
 SET(SRC main.c)
+
+SET(EXECUTABLE_OUTPUT_PATH ${RESULT_PATH})
 
 # set include dirs
 # for example: SET(include_dirs inc1 inc2 inc3)
@@ -45,7 +45,7 @@ FUNCTION(add_executable target_name)
     EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_BINARY_DIR}/compile_commands.json ${PROJECT_SOURCE_DIR})
 ENDFUNCTION(add_executable target_name)
 
-ADD_EXECUTABLE(${PROJECT_NAME} ${SRC})
+ADD_EXECUTABLE(${RESULT_NAME} ${SRC})
 
 IF(LIBS)
     target_link_libraries(${PROJECT_NAME} ${LIBS})
@@ -53,6 +53,6 @@ ENDIF()
 
 ADD_CUSTOM_TARGET(
     run 
-    COMMAND ${PROJECT_BINARY_DIR}/${BINARY_DIR}/${PROJECT_NAME}
+    COMMAND ${EXECUTABLE_OUTPUT_PATH}/${RESULT_NAME}
     DEPENDS ${PROJECT_NAME}
 )
