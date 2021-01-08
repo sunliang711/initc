@@ -1,57 +1,57 @@
-SET(SRC main.c)
+set(SRC main.cpp)
 
-SET(EXECUTABLE_OUTPUT_PATH ${RESULT_PATH})
+set(EXECUTABLE_OUTPUT_PATH ${RESULT_PATH})
 
 # set include dirs
-# for example: SET(include_dirs inc1 inc2 inc3)
-SET(include_dirs)
+# for example: set(include_dirs inc1 inc2 inc3)
+set(include_dirs)
 
 # set sub directory
 # for example: SET(sub_dirs s1 s2 s3)
-SET(sub_dirs)
+set(sub_dirs)
 
 # set libs used in the following list 'LIBS'
-# for example: SET(LIBS a b c)
-SET(LIBS)
+# for example: set(LIBS a b c)
+set(LIBS)
 
 # set link_directories
-SET(link_dirs)
+set(link_dirs)
 
-SET(CMAKE_EXPORT_COMPILE_COMMANDS on)
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 # OR
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-FOREACH(inc ${include_dirs})
-    MESSAGE(STATUS "Add include dir: ${inc}")
-    INCLUDE_DIRECTORIES(${inc})
-ENDFOREACH()
+foreach(inc ${include_dirs})
+    message(STATUS "Add include dir: ${inc}")
+    include_directories(${inc})
+endforeach()
 
-FOREACH(sub ${sub_dirs})
-    MESSAGE(STATUS "add_subdirectory ${sub}")
-    ADD_SUBDIRECTORY(${sub} ${sub}_bin)
-ENDFOREACH()
+foreach(sub ${sub_dirs})
+    message(STATUS "add_subdirectory ${sub}")
+    add_subdirectory(${sub} ${sub}_bin)
+endforeach()
 
-FOREACH(dir ${link_dirs})
-    MESSAGE(STATUS "link_directories ${link}")
-    LINK_DIRECTORIES(${dir})
-ENDFOREACH()
+foreach(dir ${link_dirs})
+    message(STATUS "link_directories ${link}")
+    link_directories(${dir})
+endforeach()
 
-FUNCTION(add_executable target_name)
+function(add_executable target_name)
     # call builtin add_executable first
     _add_executable(${target_name} ${ARGN})
     # add custom statement
-    EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_BINARY_DIR}/compile_commands.json ${PROJECT_SOURCE_DIR})
-ENDFUNCTION(add_executable target_name)
+    execute_process(COMMAND ln -sf ${PROJECT_BINARY_DIR}/compile_commands.json ${PROJECT_SOURCE_DIR})
+endfunction(add_executable target_name)
 
-ADD_EXECUTABLE(${RESULT_NAME} ${SRC})
+add_executable(${RESULT_NAME} ${SRC})
 
-IF(LIBS)
+if(LIBS)
     target_link_libraries(${PROJECT_NAME} ${LIBS})
-ENDIF()
+endif()
 
-ADD_CUSTOM_TARGET(
+add_custom_target(
     run 
     COMMAND ${EXECUTABLE_OUTPUT_PATH}/${RESULT_NAME}
     DEPENDS ${PROJECT_NAME}

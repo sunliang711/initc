@@ -55,20 +55,44 @@ function runAsRoot(){
 # function with 'function' is hidden when run help, without 'function' is show
 ###############################################################################
 create(){
-    if [ $# -eq 0 ];then
-        echo "Usage: $(basename $0) <project1> [project2] ..."
-        return 1
-    fi
+    # default project type: cpp
+    local typ=cpp
+    while getopts ":ch" opt;do
+        case "$opt" in
+            c)
+                typ=c
+                ;;
+            h)
+                _help
+                ;;
+            \?)
+                echo "Unknown option: \"$OPTARG\""
+                exit 1
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+
     projects=$@
     for p in "$@";do
         echo "${green}Create project: $p .. ${reset}"
-        create_ "$p"
+        _create "$p" "$typ"
     done
-
 }
 
-function create_(){
-    projectName=${1}
+function _help(){
+    cat<<EOF
+Usage:
+    -h      for help
+    -c      create c project (default cpp project)
+EOF
+    exit 0
+}
+
+function _create(){
+    local projectName=${1}
+    local typ=${2}
+
     if [ -z "${projectName}" ];then
         echo -n "Enter project name: "
         read projectName
@@ -89,14 +113,23 @@ function create_(){
 
     sed -e "s|<PROJECTNAME>|${projectName}|g" ${thisDir}/rootfs/CMakeLists.txt > CMakeLists.txt
     cp -r ${thisDir}/rootfs/src .
-    cat<<EOF>.gitignore
+    cat>.gitignore<<EOF
 .DS_Store
 *.swp
 .idea/
 build/
 .vscode/
 EOF
-cd - >/dev/null 2>&1
+    case "${typ}" in
+        cpp)
+            ;;
+        c)
+            mv src/main.cpp src/main.c
+            sed -e "s|main.cpp|main.c|g" src/CMakeLists.txt >/tmp/CMakeLists.txt
+            mv /tmp/CMakeLists.txt src/CMakeLists.txt
+            ;;
+    esac
+    cd - >/dev/null 2>&1
 }
 
 
