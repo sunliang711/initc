@@ -1,59 +1,215 @@
 #!/bin/bash
-rpath="$(readlink ${BASH_SOURCE})"
-if [ -z "$rpath" ];then
-    rpath=${BASH_SOURCE}
+if [ -z "${BASH_SOURCE}" ]; then
+    this=${PWD}
+else
+    rpath="$(readlink ${BASH_SOURCE})"
+    echo "rpath: $rpath"
+    if [ -z "$rpath" ]; then
+        rpath=${BASH_SOURCE}
+    fi
+    echo "rpath: $rpath"
+    this="$(cd $(dirname $rpath) && pwd)"
 fi
-thisDir="$(cd $(dirname $rpath) && pwd)"
-# cd "$thisDir"
+
+export PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 user="${SUDO_USER:-$(whoami)}"
 home="$(eval echo ~$user)"
 
-red=$(tput setaf 1)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-blue=$(tput setaf 4)
-cyan=$(tput setaf 5)
-        bold=$(tput bold)
-reset=$(tput sgr0)
-function runAsRoot(){
-    verbose=0
-    while getopts ":v" opt;do
-        case "$opt" in
-            v)
-                verbose=1
+# export TERM=xterm-256color
+
+# Use colors, but only if connected to a terminal, and that terminal
+# supports them.
+if which tput >/dev/null 2>&1; then
+  ncolors=$(tput colors 2>/dev/null)
+fi
+if [ -t 1 ] && [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ]; then
+    RED="$(tput setaf 1)"
+    GREEN="$(tput setaf 2)"
+    YELLOW="$(tput setaf 3)"
+    BLUE="$(tput setaf 4)"
+    CYAN="$(tput setaf 5)"
+    BOLD="$(tput bold)"
+    NORMAL="$(tput sgr0)"
+else
+    RED=""
+    GREEN=""
+    YELLOW=""
+    CYAN=""
+    BLUE=""
+    BOLD=""
+    NORMAL=""
+fi
+
+_err(){
+    echo "$*" >&2
+}
+
+_command_exists(){
+    command -v "$@" > /dev/null 2>&1
+}
+
+rootID=0
+
+_runAsRoot(){
+    local trace=0
+    local subshell=0
+    local nostdout=0
+    local nostderr=0
+
+    local optNum=0
+    for opt in ${@};do
+        case "${opt}" in
+            --trace|-x)
+                trace=1
+                ((optNum++))
                 ;;
-            \?)
-                echo "Unknown option: \"$OPTARG\""
-                exit 1
+            --subshell|-s)
+                subshell=1
+                ((optNum++))
+                ;;
+            --no-stdout)
+                nostdout=1
+                ((optNum++))
+                ;;
+            --no-stderr)
+                nostderr=1
+                ((optNum++))
+                ;;
+            *)
+                break
                 ;;
         esac
     done
-    shift $((OPTIND-1))
-    cmd="$@"
-    if [ -z "$cmd" ];then
-        echo "${red}Need cmd${reset}"
-        exit 1
-    fi
 
-    if [ "$verbose" -eq 1 ];then
-        echo "run cmd:\"${red}$cmd${reset}\" as root."
-    fi
-
-    if (($EUID==0));then
-        sh -c "$cmd"
-    else
-        if ! command -v sudo >/dev/null 2>&1;then
-            echo "Need sudo cmd"
+    shift $(($optNum))
+    local cmd="${*}"
+    bash_c='bash -c'
+    if [ "${EUID}" -ne "${rootID}" ];then
+        if _command_exists sudo; then
+            bash_c='sudo -E bash -c'
+        elif _command_exists su; then
+            bash_c='su -c'
+        else
+            cat >&2 <<-'EOF'
+			Error: this installer needs the ability to run commands as root.
+			We are unable to find either "sudo" or "su" available to make this happen.
+			EOF
             exit 1
         fi
-        sudo sh -c "$cmd"
+    fi
+
+    local fullcommand="${bash_c} ${cmd}"
+    if [ $nostdout -eq 1 ];then
+        cmd="${cmd} >/dev/null"
+    fi
+    if [ $nostderr -eq 1 ];then
+        cmd="${cmd} 2>/dev/null"
+    fi
+
+    # (set -x; $bash_c "${cmd}" >> ${logfile} )
+    if [ $subshell -eq 1 ];then
+        if [ $trace -eq 1 ];then
+            (set -x; ${bash_c} "${cmd}")
+        else
+            (${bash_c} "${cmd}")
+        fi
+    else
+        if [ $trace -eq 1 ];then
+            set -x; ${bash_c} "${cmd}";set +x;
+        else
+            ${bash_c} "${cmd}"
+        fi
     fi
 }
+
+function _insert_path(){
+    if [ -z "$1" ];then
+        return
+    fi
+    echo -e ${PATH//:/"\n"} | grep -c "^$1$" >/dev/null 2>&1 || export PATH=$1:$PATH
+}
+
+_run(){
+    local trace=0
+    local subshell=0
+    local nostdout=0
+    local nostderr=0
+
+    local optNum=0
+    for opt in ${@};do
+        case "${opt}" in
+            --trace|-x)
+                trace=1
+                ((optNum++))
+                ;;
+            --subshell|-s)
+                subshell=1
+                ((optNum++))
+                ;;
+            --no-stdout)
+                nostdout=1
+                ((optNum++))
+                ;;
+            --no-stderr)
+                nostderr=1
+                ((optNum++))
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    shift $(($optNum))
+    local cmd="${*}"
+    bash_c='bash -c'
+
+    local fullcommand="${bash_c} ${cmd}"
+    if [ $nostdout -eq 1 ];then
+        cmd="${cmd} >/dev/null"
+    fi
+    if [ $nostderr -eq 1 ];then
+        cmd="${cmd} 2>/dev/null"
+    fi
+
+    # (set -x; $bash_c "${cmd}" >> ${logfile} )
+    if [ $subshell -eq 1 ];then
+        if [ $trace -eq 1 ];then
+            (set -x; ${bash_c} "${cmd}")
+        else
+            (${bash_c} "${cmd}")
+        fi
+    else
+        if [ $trace -eq 1 ];then
+            set -x; ${bash_c} "${cmd}";set +x;
+        else
+            ${bash_c} "${cmd}"
+        fi
+    fi
+}
+
+function _root(){
+    if [ ${EUID} -ne ${rootID} ];then
+        echo "Requires root privilege."
+        exit 1
+    fi
+}
+
+ed=vi
+if _command_exists vim; then
+    ed=vim
+fi
+if _command_exists nvim; then
+    ed=nvim
+fi
+# use ENV: editor to override
+if [ -n "${editor}" ];then
+    ed=${editor}
+fi
 ###############################################################################
 # write your code below (just define function[s])
-# function with 'function' is hidden when run help, without 'function' is show
-###############################################################################
+# function is hidden when begin with '_'
 create(){
     # default project type: cpp
     local typ=cpp
@@ -132,23 +288,26 @@ EOF
     cd - >/dev/null 2>&1
 }
 
-
-
-###############################################################################
 # write your code above
 ###############################################################################
-function help(){
+
+em(){
+    $ed $0
+}
+
+function _help(){
+    cd "${this}"
     cat<<EOF2
 Usage: $(basename $0) ${bold}CMD${reset}
 
 ${bold}CMD${reset}:
 EOF2
-    perl -lne 'print "\t$1" if /^\s*(\w+)\(\)\{$/' ${BASH_SOURCE} | grep -v runAsRoot
+    perl -lne 'print "\t$2" if /^\s*(function)?\s*(\S+)\s*\(\)\s*\{$/' $(basename ${BASH_SOURCE}) | perl -lne "print if /^\t[^_]/"
 }
 
 case "$1" in
      ""|-h|--help|help)
-        help
+        _help
         ;;
     *)
         "$@"
